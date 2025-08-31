@@ -1,3 +1,8 @@
+POST http://localhost:8000/start
+Content-Type: application/json
+
+###
+
 GET http://localhost:8000/tilt
 Accept: application/json
 
@@ -7,7 +12,7 @@ POST http://localhost:8000/tilt
 Content-Type: application/json
 
 {
-  "angle": 5
+  "angle": 0
 }
 
 ###
