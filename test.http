@@ -3,6 +3,11 @@ Content-Type: application/json
 
 ###
 
+POST http://localhost:8000/stop
+Content-Type: application/json
+
+###
+
 GET http://localhost:8000/tilt
 Accept: application/json
 
@@ -12,12 +17,17 @@ POST http://localhost:8000/tilt
 Content-Type: application/json
 
 {
-  "angle": 0
+  "angle": 15
 }
 
 ###
 
-GET http://localhost:8000/data
+GET http://localhost:8000/video
+Accept: image/png
+
+###
+
+GET http://localhost:8000/depth
 Accept: application/json
 
 ###
