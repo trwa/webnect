@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="it">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>webnect</title>
+    <style>
+        :root {
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+        }
+
+        body {
+            margin: 0;
+            padding: 24px;
+            display: grid;
+            place-items: center;
+            background: #0b0c10;
+            color: #eaf0f6;
+        }
+
+        .wrap {
+            display: grid;
+            gap: 16px;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .card {
+            background: #111319;
+            border: 1px solid #1e2230;
+            border-radius: 16px;
+            padding: 12px;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, .24);
+        }
+
+        h1 {
+            margin: 0 0 12px;
+            font-size: 20px;
+            font-weight: 650;
+            letter-spacing: .2px;
+        }
+
+        .canvas-box {
+            display: grid;
+            gap: 8px;
+            align-items: start;
+        }
+
+        .label {
+            font-size: 14px;
+            opacity: .85;
+        }
+
+        canvas {
+            width: 640px;
+            height: 480px; /* CSS size */
+            border-radius: 12px;
+            background: #0e1116;
+            border: 1px solid #242a38;
+            display: block;
+        }
+
+        .muted {
+            font-size: 12px;
+            opacity: .65;
+            text-align: center;
+        }
+
+        @media (max-width: 1360px) {
+            .row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <h1>Stream PNG → Canvas (640×480)</h1>
+
+    <div class="row">
+        <div class="card canvas-box">
+            <div class="label">/image</div>
+            <!-- Imposta gli attributi width/height per la risoluzione reale del canvas -->
+            <canvas id="canvasImage" width="640" height="480"></canvas>
+        </div>
+
+        <div class="card canvas-box">
+            <div class="label">/depth</div>
+            <canvas id="canvasDepth" width="640" height="480"></canvas>
+        </div>
+    </div>
+
+    <div class="muted">Polling update every 100ms from <code>/image</code> and <code>/depth</code></div>
+</div>
+
+<script>
+    const canvasImage = document.getElementById('canvasImage');
+    const canvasDepth = document.getElementById('canvasDepth');
+    const ctxImage = canvasImage.getContext('2d');
+    const ctxDepth = canvasDepth.getContext('2d');
+
+    async function drawPngToCanvas(url, ctx, canvas) {
+        try {
+            const response = await fetch(`${url}?t=${Date.now()}`, {cache: 'no-store'});
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const blob = await response.blob();
+            const bitmap = await createImageBitmap(blob);
+
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw with aspect ratio preserved and centered
+            const scale = Math.min(canvas.width / bitmap.width, canvas.height / bitmap.height);
+            const dw = Math.max(1, Math.round(bitmap.width * scale));
+            const dh = Math.max(1, Math.round(bitmap.height * scale));
+            const dx = Math.floor((canvas.width - dw) / 2);
+            const dy = Math.floor((canvas.height - dh) / 2);
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(bitmap, dx, dy, dw, dh);
+        } catch (err) {
+            // Draw placeholder with error message, but don't stop
+            ctx.save();
+            ctx.fillStyle = '#121620';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#e06666';
+            ctx.font = '16px system-ui, sans-serif';
+            ctx.fillText(`Error: ${err.message}`, 12, 28);
+            ctx.restore();
+        }
+    }
+
+    function updateAll() {
+        drawPngToCanvas('/image', ctxImage, canvasImage);
+        drawPngToCanvas('/depth', ctxDepth, canvasDepth);
+    }
+
+    updateAll();
+    setInterval(updateAll, 100);
+</script>
+</body>
+</html>

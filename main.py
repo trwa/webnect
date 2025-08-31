@@ -2,6 +2,7 @@ from io import BytesIO
 
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
+from starlette.responses import HTMLResponse
 
 import kinect
 from message import StatusMessage, TiltMessage
@@ -10,8 +11,10 @@ app = FastAPI()
 
 
 @app.get("/")
-async def root() -> StatusMessage:
-    return StatusMessage(status="OK", message="Kinect server is running")
+async def root():
+    with open("public/index.html", "r") as file:
+        index = file.read()
+    return HTMLResponse(index)
 
 
 @app.post("/tilt")
