@@ -43,7 +43,7 @@ async def ws_video(websocket: WebSocket):
             image.save(buff, format="JPEG", quality=80)
             buff.seek(0)
             await websocket.send_bytes(buff.getvalue())
-            await asyncio.sleep(0.01)
+            await asyncio.sleep(0.001)
     except WebSocketDisconnect:
         print("Client disconnected")
     except Exception as e:
@@ -63,7 +63,7 @@ async def ws_depth(websocket: WebSocket):
             depth.save(buff, format="JPEG", quality=80)
             buff.seek(0)
             await websocket.send_bytes(buff.getvalue())
-            await asyncio.sleep(0.01)
+            await asyncio.sleep(0.001)
     except WebSocketDisconnect:
         print("Client disconnected")
     except Exception as e:

@@ -1,5 +1,4 @@
 import queue
-import time
 
 import PIL
 import freenect
@@ -17,10 +16,7 @@ def __cb_video(dev, data, timestamp):
 
 
 def __cb_depth(dev, data, timestamp):
-    data = data.astype(float)
-    data /= 2048.0
-    data *= 255.0
-    data = data.astype(np.uint8)
+    data = (data.astype(float) * 255.0 / 2048.0).astype(np.uint8)
     depth = PIL.Image.fromarray(data, mode="L")
     __depth.put((depth, timestamp))
 
