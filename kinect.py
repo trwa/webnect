@@ -1,36 +1,53 @@
-from threading import Lock
+import queue
 
 import PIL
 import freenect
 import numpy as np
 from PIL.Image import Image
 
-__mutex = Lock()
-__ctx = freenect.init()
+__video = queue.Queue()
+__depth = queue.Queue()
+__angle = queue.Queue()
+
+
+def __on_video(dev, data, timestamp):
+    image = PIL.Image.fromarray(data, mode="RGB")
+    __video.put((image, timestamp))
+
+
+def __on_depth(dev, data, timestamp):
+    data = data.astype(float)
+    data /= 2048.0
+    data *= 255.0
+    data = data.astype(np.uint8)
+    depth = PIL.Image.fromarray(data, mode="L")
+    __depth.put((depth, timestamp))
+
+
+def __on_angle(dev, ctx):
+    try:
+        angle = __angle.get_nowait()
+        if not 0 <= angle <= 15:
+            raise ValueError(f"Tilt angle {angle} must be between 0 and 15 degrees")
+        freenect.set_tilt_degs(dev, angle)
+    except (queue.Empty, ValueError):
+        pass
 
 
 def set_tilt(degrees: float) -> None:
-    if not 0 <= degrees <= 15:
-        raise ValueError(f"Tilt angle {degrees} must be between 0 and 15 degrees")
-    with __mutex:
-        dev = freenect.open_device(__ctx, 0)
-        freenect.set_tilt_degs(dev, degrees)
-        freenect.close_device(dev)
+    __angle.put(degrees)
 
 
 def get_depth() -> tuple[Image, int]:
-    with __mutex:
-        data, timestamp = freenect.sync_get_depth()  # (480, 640) uint16
-        data = data.astype(float)
-        data /= 2048.0
-        data *= 255.0
-        data = data.astype(np.uint8)
-        depth = PIL.Image.fromarray(data, mode="L")
-        return depth, timestamp
+    return __depth.get()
 
 
 def get_video() -> tuple[Image, int]:
-    with __mutex:
-        data, timestamp = freenect.sync_get_video()  # (480, 640, 3) uint8
-        image = PIL.Image.fromarray(data, mode="RGB")
-        return image, timestamp
+    return __video.get()
+
+
+def start() -> None:
+    ctx = freenect.init()
+    dev = freenect.open_device(ctx, 0)
+    freenect.set_depth_mode(dev, freenect.RESOLUTION_MEDIUM, freenect.DEPTH_REGISTERED)
+    freenect.runloop(__on_depth, __on_video, __on_angle, dev)

@@ -1,3 +1,4 @@
+import threading
 from io import BytesIO
 
 from fastapi import FastAPI
@@ -7,6 +8,7 @@ from starlette.responses import HTMLResponse
 import kinect
 from message import StatusMessage, TiltMessage
 
+threading.Thread(target=kinect.start, daemon=True).start()
 app = FastAPI()
 
 
