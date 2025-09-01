@@ -3,7 +3,7 @@ import threading
 from io import BytesIO
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import StreamingResponse, HTMLResponse
+from fastapi.responses import HTMLResponse
 
 import kinect
 from message import StatusMessage, TiltMessage
@@ -28,24 +28,6 @@ async def set_tilt(request: TiltMessage) -> StatusMessage:
         return StatusMessage(status="OK", message=f"Tilt set to {request.angle} degrees")
     except ValueError as e:
         return StatusMessage(status="Error", message=str(e))
-
-
-@app.get("/image")
-def get_image():
-    image, timestamp = kinect.get_video()
-    buff = BytesIO()
-    image.save(buff, format="PNG")  # Keep PNG
-    buff.seek(0)
-    return StreamingResponse(buff, media_type="image/png", headers={"X-Timestamp": str(timestamp)})
-
-
-@app.get("/depth")
-def get_depth():
-    depth, timestamp = kinect.get_depth()
-    buff = BytesIO()
-    depth.save(buff, format="PNG")
-    buff.seek(0)
-    return StreamingResponse(buff, media_type="image/png", headers={"X-Timestamp": str(timestamp)})
 
 
 @app.websocket("/ws/video")
