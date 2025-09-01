@@ -23,10 +23,11 @@
             gap: 16px;
         }
 
-        .row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
+        .card-container {
+            display: flex;
             gap: 16px;
+            flex-wrap: wrap;
+            justify-content: center;
         }
 
         .card {
@@ -42,105 +43,72 @@
             font-size: 20px;
             font-weight: 650;
             letter-spacing: .2px;
-        }
-
-        .canvas-box {
-            display: grid;
-            gap: 8px;
-            align-items: start;
-        }
-
-        .label {
-            font-size: 14px;
-            opacity: .85;
+            text-align: center;
         }
 
         canvas {
             width: 640px;
-            height: 480px; /* CSS size */
+            height: 480px;
             border-radius: 12px;
             background: #0e1116;
             border: 1px solid #242a38;
             display: block;
         }
-
-        .muted {
-            font-size: 12px;
-            opacity: .65;
-            text-align: center;
-        }
-
-        @media (max-width: 1360px) {
-            .row {
-                grid-template-columns: 1fr;
-            }
-        }
     </style>
 </head>
 <body>
 <div class="wrap">
-    <h1>Stream PNG → Canvas (640×480)</h1>
+    <h1>WebSocket PNG Streams → Canvas</h1>
 
-    <div class="row">
-        <div class="card canvas-box">
-            <div class="label">/image</div>
-            <!-- Imposta gli attributi width/height per la risoluzione reale del canvas -->
-            <canvas id="canvasImage" width="640" height="480"></canvas>
+    <div class="card-container">
+        <div class="card">
+            <h2>Video</h2>
+            <canvas id="canvasVideo" width="640" height="480"></canvas>
         </div>
 
-        <div class="card canvas-box">
-            <div class="label">/depth</div>
+        <div class="card">
+            <h2>Depth</h2>
             <canvas id="canvasDepth" width="640" height="480"></canvas>
         </div>
     </div>
-
-    <div class="muted">Polling update every 100ms from <code>/image</code> and <code>/depth</code></div>
 </div>
 
 <script>
-    const canvasImage = document.getElementById('canvasImage');
-    const canvasDepth = document.getElementById('canvasDepth');
-    const ctxImage = canvasImage.getContext('2d');
-    const ctxDepth = canvasDepth.getContext('2d');
+    function setupCanvasStream(canvasId, wsPath) {
+        const canvas = document.getElementById(canvasId);
+        const ctx = canvas.getContext('2d');
 
-    async function drawPngToCanvas(url, ctx, canvas) {
-        try {
-            const response = await fetch(`${url}?t=${Date.now()}`, {cache: 'no-store'});
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const blob = await response.blob();
-            const bitmap = await createImageBitmap(blob);
+        const ws = new WebSocket(`ws://${location.host}${wsPath}`);
+        ws.binaryType = 'arraybuffer';
 
-            // Clear canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ws.onmessage = async (event) => {
+            try {
+                const blob = new Blob([event.data], {type: 'image/png'});
+                const bitmap = await createImageBitmap(blob);
 
-            // Draw with aspect ratio preserved and centered
-            const scale = Math.min(canvas.width / bitmap.width, canvas.height / bitmap.height);
-            const dw = Math.max(1, Math.round(bitmap.width * scale));
-            const dh = Math.max(1, Math.round(bitmap.height * scale));
-            const dx = Math.floor((canvas.width - dw) / 2);
-            const dy = Math.floor((canvas.height - dh) / 2);
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-            ctx.drawImage(bitmap, dx, dy, dw, dh);
-        } catch (err) {
-            // Draw placeholder with error message, but don't stop
-            ctx.save();
-            ctx.fillStyle = '#121620';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#e06666';
-            ctx.font = '16px system-ui, sans-serif';
-            ctx.fillText(`Error: ${err.message}`, 12, 28);
-            ctx.restore();
-        }
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                const scale = Math.min(canvas.width / bitmap.width, canvas.height / bitmap.height);
+                const dw = Math.max(1, Math.round(bitmap.width * scale));
+                const dh = Math.max(1, Math.round(bitmap.height * scale));
+                const dx = Math.floor((canvas.width - dw) / 2);
+                const dy = Math.floor((canvas.height - dh) / 2);
+
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(bitmap, dx, dy, dw, dh);
+            } catch (err) {
+                console.error(`Failed to draw frame for ${canvasId}:`, err);
+            }
+        };
+
+        ws.onopen = () => console.log(`${canvasId} WebSocket connected`);
+        ws.onclose = () => console.log(`${canvasId} WebSocket disconnected`);
+        ws.onerror = (err) => console.error(`${canvasId} WebSocket error`, err);
     }
 
-    function updateAll() {
-        drawPngToCanvas('/image', ctxImage, canvasImage);
-        drawPngToCanvas('/depth', ctxDepth, canvasDepth);
-    }
-
-    updateAll();
-    setInterval(updateAll, 10);
+    setupCanvasStream('canvasVideo', '/ws/depth');
+    setupCanvasStream('canvasDepth', '/ws/video');
 </script>
 </body>
 </html>

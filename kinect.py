@@ -1,4 +1,5 @@
 import queue
+import time
 
 import PIL
 import freenect
@@ -10,12 +11,12 @@ __depth = queue.Queue()
 __angle = queue.Queue()
 
 
-def __on_video(dev, data, timestamp):
+def __cb_video(dev, data, timestamp):
     image = PIL.Image.fromarray(data, mode="RGB")
     __video.put((image, timestamp))
 
 
-def __on_depth(dev, data, timestamp):
+def __cb_depth(dev, data, timestamp):
     data = data.astype(float)
     data /= 2048.0
     data *= 255.0
@@ -24,7 +25,7 @@ def __on_depth(dev, data, timestamp):
     __depth.put((depth, timestamp))
 
 
-def __on_angle(dev, ctx):
+def __cb_body(dev, ctx):
     try:
         angle = __angle.get_nowait()
         if not 0 <= angle <= 15:
@@ -50,4 +51,4 @@ def start() -> None:
     ctx = freenect.init()
     dev = freenect.open_device(ctx, 0)
     freenect.set_depth_mode(dev, freenect.RESOLUTION_MEDIUM, freenect.DEPTH_REGISTERED)
-    freenect.runloop(__on_depth, __on_video, __on_angle, dev)
+    freenect.runloop(__cb_depth, __cb_video, __cb_body, dev)
