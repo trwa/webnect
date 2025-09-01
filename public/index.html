@@ -54,11 +54,21 @@
             border: 1px solid #242a38;
             display: block;
         }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        input[type="range"] {
+            width: 200px;
+        }
     </style>
 </head>
 <body>
 <div class="wrap">
-    <h1>WebSocket PNG Streams → Canvas</h1>
+    <h1>Web Kinect v1</h1>
 
     <div class="card-container">
         <div class="card">
@@ -69,6 +79,14 @@
         <div class="card">
             <h2>Depth</h2>
             <canvas id="canvasDepth" width="640" height="480"></canvas>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Tilt Control</h2>
+        <div class="slider-container">
+            <input type="range" id="tiltSlider" min="0" max="15" value="0"/>
+            <span id="tiltValue">0°</span>
         </div>
     </div>
 </div>
@@ -107,8 +125,27 @@
         ws.onerror = (err) => console.error(`${canvasId} WebSocket error`, err);
     }
 
-    setupCanvasStream('canvasVideo', '/ws/depth');
-    setupCanvasStream('canvasDepth', '/ws/video');
+    setupCanvasStream('canvasDepth', '/ws/depth');
+    setupCanvasStream('canvasVideo', '/ws/video');
+
+    // Tilt slider logic
+    const slider = document.getElementById('tiltSlider');
+    const tiltValue = document.getElementById('tiltValue');
+
+    slider.addEventListener('input', async () => {
+        const angle = parseInt(slider.value, 10);
+        tiltValue.textContent = angle + '°';
+
+        try {
+            await fetch('/tilt', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ angle })
+            });
+        } catch (err) {
+            console.error('Failed to set tilt:', err);
+        }
+    });
 </script>
 </body>
 </html>
