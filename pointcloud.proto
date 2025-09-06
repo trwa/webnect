@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package pointcloud;
+
+message Point {
+  // Point coordinates in meters
+  float x = 1;
+  float y = 2;
+  float z = 3;
+
+  // Color RGB: [r][g][b][_]
+  uint32 rgb_ = 4;
+
+  // Image position in pixels (row,col): [ii][jj]
+  uint32 iijj = 5;
+}
+
+message PointCloud {
+  repeated Point points = 1;
+}
