@@ -1,0 +1,50 @@
+#include <stdint.h>
+#include <stdio.h>
+
+#include "libfreenect.h"
+
+int main(int argc, char* argv[])
+{
+  int32_t ret = 0;
+  freenect_context *ctx = NULL;
+  freenect_device *dev = NULL;
+  
+  ret = freenect_init(&ctx, NULL);
+
+  if (ret != 0)
+  {
+    fprintf(stderr, "error: could not initialize context with error %d\n", ret);
+    return 1;
+  }
+
+  if (ctx == NULL)
+  {
+    fprintf(stderr, "error: could not get context\n");
+    return 1;
+  }
+  
+  ret = freenect_open_device(ctx, &dev, 0);
+
+  
+  if (ret != 0)
+  {
+    fprintf(stderr, "error: could not open device with error %d\n", ret);
+    return 1;
+  }
+
+  if (dev == NULL)
+  {
+    fprintf(stderr, "error: could not get device\n");
+    return 1;
+  }
+  
+  ret = freenect_shutdown(ctx);
+  
+  if (ret != 0)
+  {
+    fprintf(stderr, "error: could not shutdown with error %d\n", ret);
+    return 1;
+  }
+  
+  return 0;
+}
