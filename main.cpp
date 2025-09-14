@@ -44,47 +44,6 @@ int main(int argc, char *argv[]) {
   testFlatBuffers();
   std::cout << "FLATBUFFERS TEST COMPLETE" << std::endl;
 
-  cv::namedWindow("depth", cv::WINDOW_NORMAL);
-  cv::resizeWindow("depth", 640, 480);
-  //cv::namedWindow("video", cv::WINDOW_NORMAL);
-  //cv::resizeWindow("video", 640, 480);
-
-  auto const on_depth = [](freenect_device *dev, void *data, uint32_t timestamp) {
-    auto data_u16 = (uint16_t *) data;
-    float data_f32[480 * 640];
-    for (size_t i = 0; i < 480 * 640; ++i) {
-      data_f32[i] = data_u16[i] / 2048.0;
-    }
-    auto const frame = cv::Mat(480, 640, CV_32FC1, (void *) data_f32);
-    cv::imshow("depth", frame);
-  };
-  auto const on_video = [](freenect_device *dev, void *data, uint32_t timestamp) {
-    auto const frame = cv::Mat(480, 640, CV_8UC3, data);
-    cv::imshow("video", frame);
-  };
-  freenect_set_depth_callback(dev, on_depth);
-  freenect_set_video_callback(dev, on_video);
-
-  ret = freenect_start_depth(dev);
-  if (ret != 0) {
-    std::cerr << "error: could not start depth acquisition with error " << ret << '\n';
-    return 1;
-  }
-
-  //ret = freenect_start_video(dev);
-  if (ret != 0) {
-    std::cerr << "error: could not start video acquisition with error " << ret << '\n';
-    return 1;
-  }
-
-  auto running = true;
-  while (running) {
-    freenect_process_events(ctx);
-    if (cv::waitKey(30) == 27) {
-      running = false;
-    }
-  }
-
   ret = freenect_shutdown(ctx);
   if (ret != 0) {
     std::cerr << "error: could not shutdown with error " << ret << '\n';
