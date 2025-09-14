@@ -1,0 +1,32 @@
+namespace Webnect.V1;
+
+struct Color {
+    r:ubyte;
+    g:ubyte;
+    b:ubyte;
+}
+
+struct Point {
+    x:float;
+    y:float;
+    z:float;
+}
+
+struct Pixel {
+    color:Color;
+    point:Point;
+}
+
+struct Row {
+    pixels:[Pixel:640];
+}
+
+struct Image {
+    rows:[Row:480];
+}
+
+table Frame {
+    image:Image;
+    msvideo:ulong;
+    msdepth:ulong;
+}

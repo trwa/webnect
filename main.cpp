@@ -6,39 +6,43 @@
 #include "opencv2/core.hpp"
 #include "opencv2/highgui.hpp"
 
+#include "frame_generated.h"
+
+void testFlatBuffers() {
+  std::vector<Webnect::V1::Row> rows{};
+  rows.reserve(480);
+  for (auto i = 0; i < 480; i++) {
+    std::vector<Webnect::V1::Pixel> rowData = {};
+    rowData.reserve(640);
+    for (auto j = 0; j < 640; ++j) {
+      auto color = Webnect::V1::Color(255, 0, 0);
+      auto point = Webnect::V1::Point(0.0f, 1.0f, 2.0f);
+      auto pixel = Webnect::V1::Pixel(color, point);
+      rowData.push_back(pixel);
+    }
+    auto row = Webnect::V1::Row(::flatbuffers::span<const Webnect::V1::Pixel, 640>(rowData.data(), 640));
+    rows.push_back(row);
+  }
+  const auto image = Webnect::V1::Image(::flatbuffers::span<const Webnect::V1::Row, 480>(rows.data(), 480));
+  flatbuffers::FlatBufferBuilder builder;
+  auto frameBuilder = Webnect::V1::FrameBuilder(builder);
+  frameBuilder.add_image(&image);
+  frameBuilder.add_msvideo(123456);
+  frameBuilder.add_msdepth(654321);
+  const auto frameOffset = frameBuilder.Finish();
+  builder.Finish(frameOffset);
+  uint8_t *buf = builder.GetBufferPointer();
+  const auto size = builder.GetSize();
+  std::cout << size << std::endl;
+}
+
 int main(int argc, char *argv[]) {
   int32_t ret = 0;
-  freenect_context *ctx = nullptr;
-  freenect_device *dev = nullptr;
 
-  ret = freenect_init(&ctx, nullptr);
-  if (ret != 0) {
-    std::cerr << "error: could not initialize context with error " << ret << '\n';
-    return 1;
-  }
-  if (ctx == NULL) {
-    std::cerr << "error: could not get context\n";
-    return 1;
-  }
 
-  ret = freenect_open_device(ctx, &dev, 0);
-  if (ret != 0) {
-    std::cerr << "error: could not open device with error " << ret << '\n';
-    return 1;
-  }
-  if (dev == NULL) {
-    std::cerr << "error: could not get device\n";
-    return 1;
-  }
-
-  auto frame_mode = freenect_get_current_depth_mode(dev);
-  frame_mode.depth_format = FREENECT_DEPTH_REGISTERED;
-
-  ret = freenect_set_depth_mode(dev, frame_mode);
-  if (ret != 0) {
-    std::cerr << "error: could not set depth mode with error " << ret << '\n';
-    return 1;
-  }
+  std::cout << "TESTING FLATBUFFERS" << std::endl;
+  testFlatBuffers();
+  std::cout << "FLATBUFFERS TEST COMPLETE" << std::endl;
 
   cv::namedWindow("depth", cv::WINDOW_NORMAL);
   cv::resizeWindow("depth", 640, 480);
