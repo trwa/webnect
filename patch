@@ -1,4 +1,0 @@
-#!/usr/bin/env bash
-
-timeout 2s freenect-micview
-timeout 2s freenect-camtest
