@@ -7,8 +7,20 @@
 namespace trwa {
     class KinectV1 {
     public:
-        class RGBDFrame {
+        class Frame {
         public:
+            struct RGB {
+                uint8_t r;
+                uint8_t g;
+                uint8_t b;
+            };
+
+            struct XYZ {
+                double x;
+                double y;
+                uint16_t z;
+            };
+
             static constexpr auto ROWS = 480;
 
             static constexpr auto COLS = 640;
@@ -22,7 +34,7 @@ namespace trwa {
             void getDepth(uint16_t depth[ROWS * COLS]) const;
 
         private:
-            std::array<std::array<std::tuple<uint8_t, uint8_t, uint8_t, uint16_t>, COLS>, ROWS> data;
+            std::array<std::array<std::tuple<RGB, XYZ>, COLS>, ROWS> data;
             uint32_t tsVideo{};
             uint32_t tsDepth{};
         };
@@ -35,7 +47,7 @@ namespace trwa {
 
         static void run();
 
-        static void getFrame(RGBDFrame &destination);
+        static void getFrame(Frame &destination);
 
     private:
         static KinectV1 &getInstance();

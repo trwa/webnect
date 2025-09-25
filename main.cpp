@@ -19,27 +19,27 @@ int main() {
     );
 
     while (true) {
-        static trwa::KinectV1::RGBDFrame frame;
+        static trwa::KinectV1::Frame frame;
         trwa::KinectV1::getFrame(frame);
 
-        static uint8_t video[trwa::KinectV1::RGBDFrame::ROWS * trwa::KinectV1::RGBDFrame::COLS * 3];
+        static uint8_t video[trwa::KinectV1::Frame::ROWS * trwa::KinectV1::Frame::COLS * 3];
         frame.getVideo(video);
 
-        static uint16_t depth[trwa::KinectV1::RGBDFrame::ROWS * trwa::KinectV1::RGBDFrame::COLS];
+        static uint16_t depth[trwa::KinectV1::Frame::ROWS * trwa::KinectV1::Frame::COLS];
         frame.getDepth(depth);
 
-        static double fDepth[trwa::KinectV1::RGBDFrame::ROWS * trwa::KinectV1::RGBDFrame::COLS];
-        for (size_t i = 0; i < trwa::KinectV1::RGBDFrame::ROWS * trwa::KinectV1::RGBDFrame::COLS; ++i) {
+        static double fDepth[trwa::KinectV1::Frame::ROWS * trwa::KinectV1::Frame::COLS];
+        for (size_t i = 0; i < trwa::KinectV1::Frame::ROWS * trwa::KinectV1::Frame::COLS; ++i) {
             fDepth[i] = depth[i] / 2048.0;
         }
 
         cv::imshow(
             "video",
-            cv::Mat(trwa::KinectV1::RGBDFrame::ROWS, trwa::KinectV1::RGBDFrame::COLS, CV_8UC3, video)
+            cv::Mat(trwa::KinectV1::Frame::ROWS, trwa::KinectV1::Frame::COLS, CV_8UC3, video)
         );
         cv::imshow(
             "depth",
-            cv::Mat(trwa::KinectV1::RGBDFrame::ROWS, trwa::KinectV1::RGBDFrame::COLS, CV_64FC1, fDepth)
+            cv::Mat(trwa::KinectV1::Frame::ROWS, trwa::KinectV1::Frame::COLS, CV_64FC1, fDepth)
         );
 
         cv::waitKey(1);
