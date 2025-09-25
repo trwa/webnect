@@ -10,22 +10,69 @@
 
 #include <libfreenect/libfreenect.h>
 
-#include "AtomicBuffer.hpp"
+#include "Atomic.hpp"
 
 
 namespace trwa {
-    AtomicBuffer<uint16_t> depthBuffer(640 * 480);
-    AtomicBuffer<uint8_t> videoBuffer(640 * 480 * 3);
+    static freenect_context *ctx_{};
 
-    static freenect_context *ctx_ = nullptr;
-    static freenect_device *dev_ = nullptr;
+    static freenect_device *dev_{};
 
-    static void onDepth_(freenect_device *dev, void *data, uint32_t timestamp) {
-        depthBuffer.store(static_cast<uint16_t *>(data), 640 * 480);
+    static Atomic<KinectV1::RGBDFrame> frameBuffer_;
+
+    static void atomicStoreDepth_(freenect_device *_, void *data, uint32_t ts) {
+        auto const store = [data, ts](KinectV1::RGBDFrame &frame) {
+            frame.setDepth(static_cast<uint16_t const *>(data), ts);
+        };
+        frameBuffer_(store);
     }
 
-    static void onVideo_(freenect_device *dev, void *data, uint32_t timestamp) {
-        videoBuffer.store(static_cast<uint8_t *>(data), 640 * 480 * 3);
+    static void atomicStoreVideo_(freenect_device *_, void *data, uint32_t ts) {
+        auto const store = [data, ts](KinectV1::RGBDFrame &frame) {
+            frame.setVideo(static_cast<uint8_t const *>(data), ts);
+        };
+        frameBuffer_(store);
+    }
+
+
+    void KinectV1::RGBDFrame::setVideo(uint8_t const video[ROWS * COLS * 3], uint32_t const ts) {
+        for (size_t i = 0; i < ROWS; ++i) {
+            for (size_t j = 0; j < COLS; ++j) {
+                auto const pixel = video + (COLS * i + j) * 3;
+                std::get<0>(data[i][j]) = *(pixel + 0);
+                std::get<1>(data[i][j]) = *(pixel + 1);
+                std::get<2>(data[i][j]) = *(pixel + 2);
+                tsVideo = ts;
+            }
+        }
+    }
+
+    void KinectV1::RGBDFrame::setDepth(uint16_t const depth[ROWS * COLS], uint32_t const ts) {
+        for (size_t i = 0; i < ROWS; ++i) {
+            for (size_t j = 0; j < COLS; ++j) {
+                std::get<3>(data[i][j]) = depth[COLS * i + j];
+                tsDepth = ts;
+            }
+        }
+    }
+
+    void KinectV1::RGBDFrame::getVideo(uint8_t video[ROWS * COLS * 3]) const {
+        for (size_t i = 0; i < ROWS; ++i) {
+            for (size_t j = 0; j < COLS; ++j) {
+                auto const pixel = video + (COLS * i + j) * 3;
+                *(pixel + 0) = std::get<0>(data[i][j]);
+                *(pixel + 1) = std::get<1>(data[i][j]);
+                *(pixel + 2) = std::get<2>(data[i][j]);
+            }
+        }
+    }
+
+    void KinectV1::RGBDFrame::getDepth(uint16_t depth[ROWS * COLS]) const {
+        for (size_t i = 0; i < ROWS; ++i) {
+            for (size_t j = 0; j < COLS; ++j) {
+                depth[COLS * i + j] = std::get<3>(data[i][j]);
+            }
+        }
     }
 
     KinectV1 &KinectV1::getInstance() {
@@ -43,11 +90,13 @@ namespace trwa {
         }
     }
 
-    void KinectV1::runForever() {
+    void KinectV1::run() {
+        auto const &_ = getInstance();
+
         int32_t ret = 0;
 
-        freenect_set_video_callback(dev_, onVideo_);
-        freenect_set_depth_callback(dev_, onDepth_);
+        freenect_set_video_callback(dev_, atomicStoreVideo_);
+        freenect_set_depth_callback(dev_, atomicStoreDepth_);
 
         ret = freenect_start_video(dev_);
         if (ret != 0) {
@@ -91,5 +140,12 @@ namespace trwa {
         if (ret != 0) {
             throw std::runtime_error(std::format("could not set depth mode with error {}", ret));
         }
+    }
+
+    void KinectV1::getFrame(RGBDFrame &destination) {
+        std::function<void(RGBDFrame const &)> const load = [&destination](RGBDFrame const &source) {
+            destination = source;
+        };
+        frameBuffer_(load);
     }
 };

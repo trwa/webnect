@@ -1,3 +1,4 @@
+#include <array>
 #include <iostream>
 #include <thread>
 
@@ -7,42 +8,40 @@
 #include "KinectV1.hpp"
 
 
-static void showDepth() {
-    static float data_f64[480 * 640] = {0};
-    static std::vector<uint16_t> data_u16;
-    trwa::depthBuffer.load(data_u16);
-    for (size_t i = 0; i < 480 * 640; ++i) {
-        data_f64[i] = data_u16.at(i) / 2048.0f;
-    }
-    auto const frame = cv::Mat(480, 640, CV_32FC1, data_f64);
-    cv::imshow("depth", frame);
-}
-
-static void showVideo() {
-    static std::vector<uint8_t> data{};
-    trwa::videoBuffer.load(data);
-    auto const frame = cv::Mat(480, 640, CV_8UC3, data.data());
-    cv::imshow("video", frame);
-}
-
 int main() {
-    auto &kinect = trwa::KinectV1::getInstance();
-
-    cv::namedWindow("depth", cv::WINDOW_NORMAL);
-    cv::resizeWindow("depth", 640, 480);
-
     cv::namedWindow("video", cv::WINDOW_NORMAL);
-    cv::resizeWindow("video", 640, 480);
+    cv::namedWindow("depth", cv::WINDOW_NORMAL);
 
     std::thread kinectThread(
-        [&kinect]() {
-            kinect.runForever();
+        []() {
+            trwa::KinectV1::run();
         }
     );
 
     while (true) {
-        showDepth();
-        showVideo();
+        static trwa::KinectV1::RGBDFrame frame;
+        trwa::KinectV1::getFrame(frame);
+
+        static uint8_t video[trwa::KinectV1::RGBDFrame::ROWS * trwa::KinectV1::RGBDFrame::COLS * 3];
+        frame.getVideo(video);
+
+        static uint16_t depth[trwa::KinectV1::RGBDFrame::ROWS * trwa::KinectV1::RGBDFrame::COLS];
+        frame.getDepth(depth);
+
+        static double fDepth[trwa::KinectV1::RGBDFrame::ROWS * trwa::KinectV1::RGBDFrame::COLS];
+        for (size_t i = 0; i < trwa::KinectV1::RGBDFrame::ROWS * trwa::KinectV1::RGBDFrame::COLS; ++i) {
+            fDepth[i] = depth[i] / 2048.0;
+        }
+
+        cv::imshow(
+            "video",
+            cv::Mat(trwa::KinectV1::RGBDFrame::ROWS, trwa::KinectV1::RGBDFrame::COLS, CV_8UC3, video)
+        );
+        cv::imshow(
+            "depth",
+            cv::Mat(trwa::KinectV1::RGBDFrame::ROWS, trwa::KinectV1::RGBDFrame::COLS, CV_64FC1, fDepth)
+        );
+
         cv::waitKey(1);
     }
     kinectThread.join();
