@@ -19,66 +19,22 @@ namespace trwa {
 
     static freenect_device *dev_{};
 
-    static Atomic<KinectV1::Frame> frameBuffer_;
+    static Atomic<Frame> frameBuffer_;
 
     static void atomicStoreDepth_(freenect_device *_, void *data, uint32_t ts) {
-        auto const store = [data, ts](KinectV1::Frame &frame) {
+        auto const store = [data, ts](Frame &frame) {
             frame.setDepth(static_cast<uint16_t const *>(data), ts);
         };
         frameBuffer_(store);
     }
 
     static void atomicStoreVideo_(freenect_device *_, void *data, uint32_t ts) {
-        auto const store = [data, ts](KinectV1::Frame &frame) {
+        auto const store = [data, ts](Frame &frame) {
             frame.setVideo(static_cast<uint8_t const *>(data), ts);
         };
         frameBuffer_(store);
     }
 
-
-    void KinectV1::Frame::setVideo(uint8_t const video[ROWS * COLS * 3], uint32_t const ts) {
-        for (size_t i = 0; i < ROWS; ++i) {
-            for (size_t j = 0; j < COLS; ++j) {
-                auto const pixel = video + (COLS * i + j) * 3;
-                auto &[r, g, b] = std::get<0>(data[i][j]);
-                r = *(pixel + 0);
-                g = *(pixel + 1);
-                b = *(pixel + 2);
-                tsVideo = ts;
-            }
-        }
-    }
-
-    void KinectV1::Frame::setDepth(uint16_t const depth[ROWS * COLS], uint32_t const ts) {
-        for (uint16_t i = 0; i < ROWS; ++i) {
-            for (uint16_t j = 0; j < COLS; ++j) {
-                auto &[x, y, z] = std::get<1>(data[i][j]);
-                z = depth[COLS * i + j];
-                freenect_camera_to_world(dev_, j, i, z, &x, &y);
-                tsDepth = ts;
-            }
-        }
-    }
-
-    void KinectV1::Frame::getVideo(uint8_t video[ROWS * COLS * 3]) const {
-        for (size_t i = 0; i < ROWS; ++i) {
-            for (size_t j = 0; j < COLS; ++j) {
-                const auto pixel = video + (COLS * i + j) * 3;
-                auto const &[r, g, b] = std::get<0>(data[i][j]);
-                *(pixel + 0) = r;
-                *(pixel + 1) = g;
-                *(pixel + 2) = b;
-            }
-        }
-    }
-
-    void KinectV1::Frame::getDepth(uint16_t depth[ROWS * COLS]) const {
-        for (size_t i = 0; i < ROWS; ++i) {
-            for (size_t j = 0; j < COLS; ++j) {
-                depth[COLS * i + j] = std::get<1>(data[i][j]).z;
-            }
-        }
-    }
 
     KinectV1 &KinectV1::getInstance() {
         static KinectV1 instance{};
@@ -152,5 +108,49 @@ namespace trwa {
             destination = source;
         };
         frameBuffer_(load);
+    }
+
+    void Frame::setVideo(uint8_t const video[ROWS * COLS * 3], uint32_t const ts) {
+        for (size_t i = 0; i < ROWS; ++i) {
+            for (size_t j = 0; j < COLS; ++j) {
+                auto const pixel = video + (COLS * i + j) * 3;
+                auto &[r, g, b] = std::get<0>(data[i][j]);
+                r = *(pixel + 0);
+                g = *(pixel + 1);
+                b = *(pixel + 2);
+                tsVideo = ts;
+            }
+        }
+    }
+
+    void Frame::setDepth(uint16_t const depth[ROWS * COLS], uint32_t const ts) {
+        for (uint16_t i = 0; i < ROWS; ++i) {
+            for (uint16_t j = 0; j < COLS; ++j) {
+                auto &[x, y, z] = std::get<1>(data[i][j]);
+                z = depth[COLS * i + j];
+                freenect_camera_to_world(dev_, j, i, z, &x, &y);
+                tsDepth = ts;
+            }
+        }
+    }
+
+    void Frame::getVideo(uint8_t video[ROWS * COLS * 3]) const {
+        for (size_t i = 0; i < ROWS; ++i) {
+            for (size_t j = 0; j < COLS; ++j) {
+                const auto pixel = video + (COLS * i + j) * 3;
+                auto const &[r, g, b] = std::get<0>(data[i][j]);
+                *(pixel + 0) = r;
+                *(pixel + 1) = g;
+                *(pixel + 2) = b;
+            }
+        }
+    }
+
+    void Frame::getDepth(uint16_t depth[ROWS * COLS]) const {
+        for (size_t i = 0; i < ROWS; ++i) {
+            for (size_t j = 0; j < COLS; ++j) {
+                depth[COLS * i + j] = std::get<1>(data[i][j]).z;
+            }
+        }
     }
 };
