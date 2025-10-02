@@ -115,9 +115,9 @@ namespace trwa {
             for (size_t j = 0; j < COLS; ++j) {
                 auto const pixel = video + (COLS * i + j) * 3;
                 auto &[r, g, b] = std::get<0>(data[i][j]);
-                r = *(pixel + 0);
+                r = *(pixel + 2);
                 g = *(pixel + 1);
-                b = *(pixel + 2);
+                b = *(pixel + 0);
                 tsVideo = ts;
             }
         }
